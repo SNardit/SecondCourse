@@ -1,7 +1,6 @@
 package lesson1;
 
 
-import java.util.ArrayList;
 
 public class Competition {
     public static void main(String[] args) {
@@ -23,6 +22,7 @@ public class Competition {
 
         // соревнование где учатники не прошедшие состязание не переходят в следующий тур
         Game.doGame(participants, barriers);
+
 
     }
 
