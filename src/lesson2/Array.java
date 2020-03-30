@@ -26,7 +26,8 @@ public class Array {
                 arr[i][j] = "0" + i+j;
             }
         }
-        arr [1][2] = null;
+        arr [1][2] = "Oh";
+        arr [3][2] = null;
 
         int sum = 0;
 
