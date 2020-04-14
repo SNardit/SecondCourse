@@ -33,7 +33,9 @@ public class WindowBuilding {
 
             chatMessages.setBackground(new Color(240, 250, 250));
             chatMessages.setText("Ваши предыдущие сообщения: \n");
-            chatMessages.setCaretColor(chatMessages.getBackground());
+          //  chatMessages.setCaretColor(chatMessages.getBackground());
+            //chatMessages.enableInputMethods(true);
+            chatMessages.setEditable(false);
 
 
             JPanel sendMessagePanel = new JPanel();
