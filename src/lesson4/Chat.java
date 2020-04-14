@@ -9,7 +9,7 @@ public class Chat {
     public static void addListeners(JTextArea chatMessages, JTextField entryField, JButton sendButton) {
         sendButton.addActionListener(e -> Chat.sendMessage(entryField, chatMessages));
         entryField.addActionListener(e -> Chat.sendMessage(entryField, chatMessages));
-        chatMessages.addKeyListener(new KeyListener() {
+        /*chatMessages.addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
                 e.consume();
@@ -24,7 +24,7 @@ public class Chat {
             public void keyReleased(KeyEvent e) {
                 e.consume();
             }
-        });
+        });*/
     }
 
     public static void sendMessage(JTextField entryField, JTextArea chatMessages) {
