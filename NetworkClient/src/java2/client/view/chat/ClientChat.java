@@ -11,7 +11,7 @@ public class ClientChat {
     public static JPanel mainPanel;
     public static JButton sendButton;
     public static JTextField entryField;
-    private static JList <String> usersList;
+    public static JList <String> usersList;
     public static JTextArea chatMessages;
 
     static class MyWindowChat extends JFrame {
@@ -26,8 +26,8 @@ public class ClientChat {
             usersPane.setPreferredSize(new Dimension(150, getHeight()));
             mainPanel.add(usersPane, BorderLayout.WEST);
 
-            String[] users = {"user1", "user2", "user3"};
-            usersList = new JList<>(users);
+            //String[] users = {"All", "nick1", "nick2", "nick3", "nick4", "nick5"};
+            usersList = new JList<>();
             usersPane.add(usersList, BorderLayout.CENTER);
             usersList.setPreferredSize(usersPane.getPreferredSize());
             usersList.setSelectionBackground(BRIGHT_GREEN);

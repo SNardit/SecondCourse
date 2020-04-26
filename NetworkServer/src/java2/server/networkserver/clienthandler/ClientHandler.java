@@ -1,14 +1,16 @@
 package java2.server.networkserver.clienthandler;
 
+import java2.client.Command;
+import java2.client.command.AuthCommand;
+import java2.client.command.BroadcastMessageCommand;
+import java2.client.command.PrivateMessageCommand;
 import java2.server.networkserver.MyServer;
 import java2.server.networkserver.auth.AuthService;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
-
-import static java2.server.networkserver.MessageConstant.*;
 
 public class ClientHandler {
 
@@ -16,8 +18,8 @@ public class ClientHandler {
     private final Socket clientSocket;
     private final AuthService authService;
 
-    private DataInputStream inputStream;
-    private DataOutputStream outputStream;
+    private ObjectInputStream inputStream;
+    private ObjectOutputStream outputStream;
     private String nickname;
 
     public ClientHandler(Socket clientSocket, MyServer myServer) {
@@ -28,16 +30,15 @@ public class ClientHandler {
     }
 
     public void handle() throws IOException {
-        inputStream = new DataInputStream(clientSocket.getInputStream());
-        outputStream = new DataOutputStream(clientSocket.getOutputStream());
+        inputStream = new ObjectInputStream(clientSocket.getInputStream());
+        outputStream = new ObjectOutputStream(clientSocket.getOutputStream());
 
         new Thread(()-> {
             try {
                 authentication();
                 readMessage();
             } catch (IOException e) {
-                System.err.println("Connection has been failed!");
-                e.printStackTrace();
+                System.out.println("Connection has been failed!");
             } finally {
                 closeConnection();
             }
@@ -45,8 +46,8 @@ public class ClientHandler {
     }
 
     private void closeConnection() {
-        serverInstance.unsubscribe(this);
         try {
+            serverInstance.unsubscribe(this);
             clientSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -55,48 +56,105 @@ public class ClientHandler {
 
     private void readMessage() throws IOException {
         while (true) {
-            String message = inputStream.readUTF();
-            if (message.startsWith(END_CMD)) {
-                return;
+            Command command = readCommand();
+            if (command == null) {
+                continue;
             }
-            if (message.startsWith("/w")) {
-                String [] parts = message.split("\\s+", 3);
-                String nickname = parts[1];
-                String messageForSent = parts[2];
-                serverInstance.privateMessage(nickname, messageForSent);
-            }
-            else
-            {
-                serverInstance.broadcastMessage(String.format("%s: %s", nickname, message));
+            switch (command.getType()) {
+                case END:
+                    return;
+                case BROADCAST_MESSAGE:
+                    BroadcastMessageCommand data = (BroadcastMessageCommand) command.getData();
+                    serverInstance.broadcastMessage(Command.messageCommand(nickname, data.getMessage()));
+                    break;
+                case PRIVATE_MESSAGE:
+                    PrivateMessageCommand privateMessageCommand = (PrivateMessageCommand) command.getData();
+                    String receiver = privateMessageCommand.getReceiver();
+                    String message = privateMessageCommand.getMessage();
+                    serverInstance.privateMessage(receiver, Command.messageCommand(nickname, message));
+                    break;
+                default:
+                    String errorMessage = "Unknown type of command: " + command.getType();
+                    System.err.println(errorMessage);
+                    sendMessage(Command.errorCommand(errorMessage));
             }
         }
     }
 
+    private Command readCommand() throws IOException {
+        try {
+            return (Command) inputStream.readObject();
+        } catch (ClassNotFoundException e) {
+            String errorMessage = "Unknown type of object from client!";
+            System.err.println(errorMessage);
+            e.printStackTrace();
+            sendMessage(Command.errorCommand(errorMessage));
+            return null;
+        }
+    }
+
     private void authentication() throws IOException {
+
+        Thread closeConnection = getTimeThreadForCloseConnection();
+
         while (true) {
-            String message = inputStream.readUTF();
-            if (message.startsWith(AUTH_CMD)) {
-                String[] parts = message.split("\\s+");
-                String login = parts[1];
-                String password = parts[2];
-
-                String nickname = authService.getNickByLoginAndPassword(login, password);
-                if (nickname == null) {
-                    sendMessage("Wrong login or/and password!");
-
-                }
-                else if (serverInstance.isNicknameBusy(nickname)) {
-                    sendMessage("Account is already using!");
-                }
-                else {
-                    sendMessage(String.format("%s %s", AUTH_SUCCESSFUL_CMD, nickname));
-                    setNickname(nickname);
-                    serverInstance.broadcastMessage(nickname + " is online!");
-                    serverInstance.subscribe(this);
+            Command command = readCommand();
+            if (command == null) {
+                continue;
+            }
+            switch (command.getType()) {
+                case AUTH: {
+                    if (processAuthCommand(command)) {
+                        closeConnection.interrupt();
+                        return;
+                    }
                     break;
                 }
+                default:
+                    String errorMessage = "Illegal command for authentication: " + command.getType();
+                    System.err.println(errorMessage);
+                    sendMessage(Command.errorCommand(errorMessage));
             }
         }
+    }
+
+    private Thread getTimeThreadForCloseConnection() {
+        Thread closeConnection = new Thread(() -> {
+            try {
+                Thread.sleep(120000);
+                if (!Thread.currentThread().isInterrupted()) {
+                    clientSocket.close();
+                }
+            } catch (InterruptedException e) {
+                System.out.println("Authentication has been successful");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        closeConnection.start();
+        return closeConnection;
+    }
+
+    private boolean processAuthCommand(Command command) throws IOException {
+        AuthCommand authCommand = (AuthCommand) command.getData();
+        String login = authCommand.getLogin();
+        String password = authCommand.getPassword();
+        String nickname = authService.getNickByLoginAndPassword(login, password);
+        if (nickname == null) {
+            sendMessage(Command.authErrorCommand("Wrong login or/and password!"));
+        }
+        else if (serverInstance.isNicknameBusy(nickname)) {
+            sendMessage(Command.authErrorCommand("Account is already using!"));
+        }
+        else {
+            authCommand.setUsername(nickname);
+            sendMessage(command);
+            setNickname(nickname);
+            serverInstance.broadcastMessage(Command.messageCommand(null, nickname + " is online!"));
+            serverInstance.subscribe(this);
+            return true;
+        }
+        return false;
     }
 
     private void setNickname(String nickname) {
@@ -107,7 +165,7 @@ public class ClientHandler {
         return nickname;
     }
 
-    public void sendMessage(String message) throws IOException {
-        outputStream.writeUTF(message);
+    public void sendMessage(Command command) throws IOException {
+        outputStream.writeObject(command);
     }
 }

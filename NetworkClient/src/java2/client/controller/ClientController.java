@@ -1,13 +1,16 @@
 package java2.client.controller;
 
+import java2.client.Command;
 import java2.client.model.NetworkService;
 import java2.client.view.auth.AuthDialogAction;
 import java2.client.view.chat.ClientChatAction;
 
 import javax.swing.*;
 import java.io.IOException;
+import java.util.List;
 
 public class ClientController {
+    public static final String ALL_USERS_LIST_ITEM = "All";
     private final NetworkService networkService;
     private final AuthDialogAction authDialogAction;
     private final ClientChatAction clientChatAction;
@@ -53,16 +56,19 @@ public class ClientController {
         }
     }
 
-    public void sendAuthMessage(String login, String pass) throws IOException {
-        networkService.sendAuthMessage(login, pass);
+    public void sendAuthMessage(String login, String pass) {
+        sendCommand(Command.authCommand(login, pass));
     }
 
     public void sendMessage(String message) {
+        sendCommand(Command.broadcastMessageCommand(message));
+    }
+
+    private void sendCommand (Command command) {
         try {
-            networkService.sendMessage(message);
+            networkService.sendCommand(command);
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "Failed to send message!");
-            e.printStackTrace();
+            showErrorMessage(e.getMessage());
         }
     }
 
@@ -74,9 +80,32 @@ public class ClientController {
         return nickname;
     }
 
-    public void showErrorMessage(String message) {
-        JOptionPane.showMessageDialog(authDialogAction, message);
+    public void showErrorMessage(String errorMessage) {
+        if (clientChatAction.isActive()) {
+            clientChatAction.showError(errorMessage);
+        }
+        else if (authDialogAction.isActive()) {
+            authDialogAction.showError(errorMessage);
+        }
+        else {
+            System.err.println(errorMessage);
+        }
+
     }
 
 
+    public void sendPrivateMessage(String nickname, String message) {
+        sendCommand(Command.privateMessageCommand(nickname, message));
+    }
+
+    public void updateUsersList(List<String> users) {
+        users.remove(nickname);
+        users.add(0, ALL_USERS_LIST_ITEM);
+        clientChatAction.updateUsers(users);
+    }
+
+    public void closeAllWindows() {
+        authDialogAction.dispose();
+        clientChatAction.dispose();
+    }
 }

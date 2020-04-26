@@ -5,6 +5,7 @@ import java2.client.controller.ClientController;
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.List;
 
 import static java2.client.view.chat.ClientChat.*;
 
@@ -46,7 +47,14 @@ public class ClientChatAction extends MyWindowChat {
         }
 
         appendOwnMessage(message);
+
+        if (usersList.getSelectedIndex() < 1) {
         controller.sendMessage(message);
+        }
+        else {
+            String nickname = usersList.getSelectedValue();
+            controller.sendPrivateMessage(nickname, message);
+        }
         entryField.setText(null);
     }
 
@@ -62,4 +70,17 @@ public class ClientChatAction extends MyWindowChat {
         appendMessage("Я: " + message);
     }
 
+    public void showError(String errorMessage) {
+        JOptionPane.showMessageDialog(this, errorMessage);
+    }
+
+    public void updateUsers(List<String> users) {
+        SwingUtilities.invokeLater(() -> {
+            DefaultListModel<String> model = new DefaultListModel<>();
+            for (String user : users) {
+                model.addElement(user);
+            }
+            usersList.setModel(model);
+        });
+    }
 }
