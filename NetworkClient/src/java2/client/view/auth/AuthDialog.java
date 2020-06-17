@@ -18,7 +18,6 @@ public class AuthDialog {
 
     static class MyWindowAuth extends JFrame {
 
-
         public MyWindowAuth() {
 
             contentPanel = new JPanel(new BorderLayout());

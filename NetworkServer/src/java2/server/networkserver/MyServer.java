@@ -1,5 +1,6 @@
 package java2.server.networkserver;
 
+import java2.client.Command;
 import java2.server.networkserver.auth.AuthService;
 import java2.server.networkserver.auth.BaseAuthService;
 import java2.server.networkserver.clienthandler.ClientHandler;
@@ -61,25 +62,42 @@ public class MyServer {
         return false;
     }
 
-    public synchronized void broadcastMessage(String message) throws IOException {
+    public synchronized void broadcastMessage(Command command) throws IOException {
         for (ClientHandler client : clients) {
-            client.sendMessage(message);
+            client.sendMessage(command);
         }
     }
 
-    public synchronized void privateMessage(String nickname, String message) throws IOException {
+    public synchronized void privateMessage(String receiver, Command command) throws IOException {
         for (ClientHandler client : clients) {
-            if (client.getNickname().equals(nickname)) {
-            client.sendMessage(message);
+            if (client.getNickname().equals(receiver)) {
+            client.sendMessage(command);
+            return;
             }
         }
     }
 
-    public synchronized void subscribe(ClientHandler clientHandler) {
+    public synchronized void subscribe(ClientHandler clientHandler) throws IOException {
         clients.add(clientHandler);
+        List<String> users = getAllUsername();
+        broadcastMessage(Command.updateUsersListCommand(users));
     }
 
-    public synchronized void unsubscribe(ClientHandler clientHandler) {
+    public synchronized void unsubscribe(ClientHandler clientHandler) throws IOException {
         clients.remove(clientHandler);
+        List<String> users = getAllUsername();
+        broadcastMessage(Command.updateUsersListCommand(users));
+    }
+
+    private List<String> getAllUsername() {
+        /*return clients.stream()
+                .map(ClientHandler::getNickname)
+                .collect(Collectors.toList());*/
+
+        List<String> result = new ArrayList<>();
+        for (ClientHandler client : clients) {
+            result.add(client.getNickname());
+        }
+        return result;
     }
 }

@@ -5,7 +5,6 @@ import java2.client.controller.ClientController;
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.IOException;
 
 import static java2.client.view.auth.AuthDialog.*;
 
@@ -42,15 +41,15 @@ public class AuthDialogAction extends MyWindowAuth {
     private void onOK() {
         String login = entryLogin.getText().trim();
         String pass = new String(entryPass.getPassword()).trim();
-        try {
-            controller.sendAuthMessage(login, pass);
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Ошибка при попытки аутентификации");
-        }
+        controller.sendAuthMessage(login, pass);
     }
 
     private void onCancel() {
         System.exit(0);
     }
 
+    public void showError(String errorMessage) {
+        JOptionPane.showMessageDialog(this, errorMessage);
+
+    }
 }
